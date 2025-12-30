@@ -1,6 +1,4 @@
-"""
-Dummy SMS service for demo mode
-"""
+"""Dummy SMS service for demo mode"""
 
 class SMSService:
     def __init__(self):
