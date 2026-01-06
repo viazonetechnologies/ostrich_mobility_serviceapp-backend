@@ -88,7 +88,7 @@ app.config['SECRET_KEY'] = SECRET_KEY
 DB_CONFIG = {
     'host': os.getenv('DB_HOST', 'mysql-ostrich-tviazone-5922.i.aivencloud.com'),
     'user': os.getenv('DB_USER', 'avnadmin'),
-    'password': os.getenv('DB_PASSWORD', 'your-password-here'),
+    'password': os.getenv('DB_PASSWORD'),
     'database': os.getenv('DB_NAME', 'defaultdb'),
     'port': int(os.getenv('DB_PORT', 16599)),
     'charset': 'utf8mb4',
