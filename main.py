@@ -81,14 +81,14 @@ reports_ns = api.namespace('reports', description='Reports & Analytics')
 inventory_ns = api.namespace('inventory', description='Parts & Inventory')
 
 # Configuration
-SECRET_KEY = os.getenv('SECRET_KEY', 'service-secret-key')
+SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key-here')
 app.config['SECRET_KEY'] = SECRET_KEY
 
 # Database configuration - Use environment variables for production
 DB_CONFIG = {
     'host': os.getenv('DB_HOST', 'mysql-ostrich-tviazone-5922.i.aivencloud.com'),
     'user': os.getenv('DB_USER', 'avnadmin'),
-    'password': os.getenv('DB_PASSWORD', 'AVNS_c985UhSyW3FZhUdTmI8'),  # Correct password
+    'password': os.getenv('DB_PASSWORD', 'your-password-here'),
     'database': os.getenv('DB_NAME', 'defaultdb'),
     'port': int(os.getenv('DB_PORT', 16599)),
     'charset': 'utf8mb4',
