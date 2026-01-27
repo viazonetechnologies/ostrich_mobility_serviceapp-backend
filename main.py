@@ -1,3 +1,4 @@
+import bcrypt
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_restx import Api, Resource, fields, Namespace
@@ -81,14 +82,14 @@ reports_ns = api.namespace('reports', description='Reports & Analytics')
 inventory_ns = api.namespace('inventory', description='Parts & Inventory')
 
 # Configuration
-SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key-here')
+SECRET_KEY = os.getenv('SECRET_KEY', 'service-secret-key')
 app.config['SECRET_KEY'] = SECRET_KEY
 
 # Database configuration - Use environment variables for production
 DB_CONFIG = {
     'host': os.getenv('DB_HOST', 'mysql-ostrich-tviazone-5922.i.aivencloud.com'),
     'user': os.getenv('DB_USER', 'avnadmin'),
-    'password': os.getenv('DB_PASSWORD'),
+    'password': os.getenv('DB_PASSWORD', 'AVNS_c985UhSyW3FZhUdTmI8'),  # Correct password
     'database': os.getenv('DB_NAME', 'defaultdb'),
     'port': int(os.getenv('DB_PORT', 16599)),
     'charset': 'utf8mb4',
@@ -218,6 +219,28 @@ FALLBACK_DATA = {
 }
 
 # Helper functions - Updated for users table
+def authenticate_user(username, password):
+    """Authenticate user with bcrypt password verification"""
+    with get_db_connection() as conn:
+        if conn:
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
+            cursor.execute("""
+                SELECT * FROM users 
+                WHERE username = %s AND role = 'service_staff' AND is_active = 1
+            """, (username,))
+            user = cursor.fetchone()
+            cursor.close()
+            
+            if user and user.get('password_hash'):
+                try:
+                    # Verify password using bcrypt
+                    if bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
+                        return user
+                except Exception as e:
+                    print(f"Password verification error: {e}")
+            
+    return None
+
 def get_technician_data(technician_id):
     with get_db_connection() as conn:
         if conn:
@@ -300,37 +323,30 @@ class Login(Resource):
             username = data.get('username')
             password = data.get('password')
             
-            print(f"Login attempt: {username}")  # Keep minimal logging
+            print(f"Login attempt: {username}")
             
-            # Check database for real users first
-            with get_db_connection() as conn:
-                if conn:
-                    cursor = conn.cursor(pymysql.cursors.DictCursor)
-                    cursor.execute("""
-                        SELECT * FROM users 
-                        WHERE username = %s AND password_hash = %s AND role = 'service_staff' AND is_active = 1
-                    """, (username, password))
-                    user = cursor.fetchone()
-                    cursor.close()
-                    
-                    if user:
-                        access_token = create_access_token({"sub": str(user['id']), "username": username, "role": user['role']})
-                        print(f"Database login successful for: {username}")
-                        return {
-                            "message": "Login successful",
-                            "status": True,
-                            "data": {
-                                "access_token": access_token,
-                                "token_type": "bearer",
-                                "technician_id": user['id'],
-                                "full_name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip(),
-                                "role": user['role'],
-                                "employee_id": f"EMP{user['id']:03d}"
-                            }
-                        }
-                else:
-                    print("Database connection failed - cannot authenticate users")
-                    return {"message": "Database connection failed", "status": False, "data": None}, 500
+            # Use the fixed authentication function
+            user = authenticate_user(username, password)
+            
+            if user:
+                access_token = create_access_token({
+                    "sub": str(user['id']), 
+                    "username": username, 
+                    "role": user['role']
+                })
+                print(f"Login successful for: {username}")
+                return {
+                    "message": "Login successful",
+                    "status": True,
+                    "data": {
+                        "access_token": access_token,
+                        "token_type": "bearer",
+                        "technician_id": user['id'],
+                        "full_name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip(),
+                        "role": user['role'],
+                        "employee_id": f"EMP{user['id']:03d}"
+                    }
+                }
             
             print(f"Login failed for: {username}")
             return {"message": "Invalid username or password", "status": False, "data": None}, 401
